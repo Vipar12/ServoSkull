@@ -1,0 +1,17 @@
+# Ignore secrets
+.env
+
+# Python
+__pycache__/
+*.pyc
+
+# Virtual environments
+.venv/
+venv/
+
+# VS / IDE junk
+.vs/
+.vscode/
+
+# Build / misc
+*.log
