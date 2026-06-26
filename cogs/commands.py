@@ -43,6 +43,14 @@ class MatchCog(commands.Cog):
         "T'au Empire",
     ]
 
+    ALLOWED_DISPOSITIONS = [
+        "Take and Hold",
+        "Purge the Foe",
+        "Disruption",
+        "Priority Assets",
+        "Reconnaissance",
+    ]
+
     def __init__(self, bot: commands.Bot, db: Database):
         self.bot = bot
         self.db = db
@@ -120,20 +128,68 @@ class MatchCog(commands.Cog):
         matches = (starts_with + contains)[:25]
         return [app_commands.Choice(name=army, value=army) for army in matches]
 
+    @classmethod
+    def _normalize_disposition(cls, value: str) -> str:
+        return " ".join(value.strip().lower().split())
+
+    @classmethod
+    def _disposition_lookup(cls) -> dict[str, str]:
+        return {cls._normalize_disposition(name): name for name in cls.ALLOWED_DISPOSITIONS}
+
+    def _validate_disposition(self, disposition: str) -> Optional[str]:
+        lookup = self._disposition_lookup()
+        return lookup.get(self._normalize_disposition(disposition))
+
+    async def disposition_autocomplete(
+        self,
+        interaction: discord.Interaction,
+        current: str,
+    ) -> list[app_commands.Choice[str]]:
+        current_norm = self._normalize_disposition(current)
+
+        starts_with = []
+        contains = []
+
+        for disposition in self.ALLOWED_DISPOSITIONS:
+            disp_norm = self._normalize_disposition(disposition)
+
+            if not current_norm:
+                starts_with.append(disposition)
+            elif disp_norm.startswith(current_norm):
+                starts_with.append(disposition)
+            elif current_norm in disp_norm:
+                contains.append(disposition)
+
+        matches = (starts_with + contains)[:25]
+        return [app_commands.Choice(name=disp, value=disp) for disp in matches]
+
+    def _format_date_display(self, date_str: str) -> str:
+        """Convert ISO format (YYYY-MM-DD) to display format (DD/MM/YYYY)"""
+        try:
+            dt = datetime.datetime.fromisoformat(date_str)
+            return dt.strftime("%d/%m/%Y")
+        except Exception:
+            return date_str
+
+
     @app_commands.command(name="record", description="Record a match result")
     @app_commands.describe(
         winner="Winner (mention)",
         loser="Loser (mention)",
         winner_army="Winner's army",
+        winner_disposition="Winner's disposition",
         loser_army="Loser's army",
+        loser_disposition="Loser's disposition",
         winner_score="Winner's score",
         loser_score="Loser's score",
-        date="Optional date (YYYY-MM-DD)",
+        date="Optional date (DD/MM/YYYY)",
         notes="Optional notes",
     )
     @app_commands.autocomplete(
         winner_army=army_autocomplete,
         loser_army=army_autocomplete,
+        winner_disposition=disposition_autocomplete,
+        loser_disposition=disposition_autocomplete,
     )
     async def record(
         self,
@@ -141,7 +197,9 @@ class MatchCog(commands.Cog):
         winner: discord.Member,
         loser: discord.Member,
         winner_army: str,
+        winner_disposition: str,
         loser_army: str,
+        loser_disposition: str,
         winner_score: int,
         loser_score: int,
         date: Optional[str] = None,
@@ -188,14 +246,35 @@ class MatchCog(commands.Cog):
         winner_army = canonical_winner_army
         loser_army = canonical_loser_army
 
-        # Parse date
+        # Validate dispositions
+        canonical_winner_disposition = self._validate_disposition(winner_disposition)
+        if canonical_winner_disposition is None:
+            await interaction.response.send_message(
+                "Winner disposition is not in the approved list. Please use the autocomplete suggestions.",
+                ephemeral=True,
+            )
+            return
+
+        canonical_loser_disposition = self._validate_disposition(loser_disposition)
+        if canonical_loser_disposition is None:
+            await interaction.response.send_message(
+                "Loser disposition is not in the approved list. Please use the autocomplete suggestions.",
+                ephemeral=True,
+            )
+            return
+
+        winner_disposition = canonical_winner_disposition
+        loser_disposition = canonical_loser_disposition
+
+        # Parse date - accepts DD/MM/YYYY format
         if date:
             try:
-                dt = datetime.datetime.fromisoformat(date)
+                # Try parsing as DD/MM/YYYY first
+                dt = datetime.datetime.strptime(date, "%d/%m/%Y")
                 date_iso = dt.date().isoformat()
-            except Exception:
+            except ValueError:
                 await interaction.response.send_message(
-                    "Date must be in YYYY-MM-DD format.",
+                    "Date must be in DD/MM/YYYY format.",
                     ephemeral=True,
                 )
                 return
@@ -220,6 +299,8 @@ class MatchCog(commands.Cog):
                 loser_score,
                 winner_army,
                 loser_army,
+                winner_disposition,
+                loser_disposition,
                 date_iso,
                 notes,
             )
@@ -230,16 +311,26 @@ class MatchCog(commands.Cog):
             )
             return
 
+        formatted_date = self._format_date_display(date_iso)
+
         embed = Embed(title="Match Recorded", color=discord.Color.green())
         embed.add_field(
             name="Winner",
             value=f"{winner.mention} ({winner_army}) - {winner_score}",
         )
         embed.add_field(
+            name="Winner Disposition",
+            value=winner_disposition,
+        )
+        embed.add_field(
             name="Loser",
             value=f"{loser.mention} ({loser_army}) - {loser_score}",
         )
-        embed.add_field(name="Date", value=date_iso)
+        embed.add_field(
+            name="Loser Disposition",
+            value=loser_disposition,
+        )
+        embed.add_field(name="Date", value=formatted_date)
 
         if notes:
             embed.add_field(name="Notes", value=notes, inline=False)
@@ -358,8 +449,9 @@ class MatchCog(commands.Cog):
                 f"{winner_mention} ({r['winner_army']}) {r['winner_score']} - "
                 f"{r['loser_score']} ({r['loser_army']}) {loser_mention}"
             )
+            formatted_date = self._format_date_display(r['date'])
             embed.add_field(
-                name=f"Match {r['id']} - {r['date']}",
+                name=f"Match {r['id']} - {formatted_date}",
                 value=desc,
                 inline=False,
             )

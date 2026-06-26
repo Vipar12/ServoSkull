@@ -21,7 +21,25 @@
     <EnableUnmanagedDebugging>false</EnableUnmanagedDebugging>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="add_dispositions.py" />
+    <Compile Include="add_methods.py" />
+    <Compile Include="add_validation.py" />
+    <Compile Include="analyze_char.py" />
+    <Compile Include="check.py" />
+    <Compile Include="cogs\commands.py" />
+    <Compile Include="debug.py" />
+    <Compile Include="diagnose.py" />
+    <Compile Include="fix_code.py" />
+    <Compile Include="fix_final.py" />
+    <Compile Include="fix_indent.py" />
+    <Compile Include="process_file.py" />
     <Compile Include="ServoSkull.py" />
+    <Compile Include="update_embed.py" />
+    <Compile Include="update_recent.py" />
+    <Compile Include="update_record.py" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="cogs\" />
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Python Tools\Microsoft.PythonTools.targets" />
   <!-- Uncomment the CoreCompile target to enable the Build command in

@@ -9,7 +9,9 @@ class MatchRecord:
     winner_id: str
     loser_id: str
     winner_score: int
+    winner_disposition: str
     loser_score: int
+    loser_disposition: str
     winner_army: str
     loser_army: str
     date: str
