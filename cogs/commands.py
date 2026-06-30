@@ -187,57 +187,52 @@ class MatchCog(commands.Cog):
         date: Optional[str] = None,
         notes: Optional[str] = None,
     ):
+        await interaction.response.defer(ephemeral=True)
+
         # Basic validation
         if winner.id == loser.id:
-            await interaction.response.send_message(
-                "Winner and loser cannot be the same user.",
-                ephemeral=True,
+            await interaction.followup.send(
+                "Winner and loser cannot be the same user."
             )
             return
 
         if not isinstance(winner_score, int) or not isinstance(loser_score, int):
-            await interaction.response.send_message(
-                "Scores must be integers.",
-                ephemeral=True,
+            await interaction.followup.send(
+                "Scores must be integers."
             )
             return
 
         if winner_score < loser_score and (not notes or len(notes.strip()) == 0):
-            await interaction.response.send_message(
-                "Winner score is less than loser score. Provide notes to explain a non-standard result.",
-                ephemeral=True,
+            await interaction.followup.send(
+                "Winner score is less than loser score. Provide notes to explain a non-standard result."
             )
             return
 
         canonical_winner_army = self._validate_army_name(winner_army)
         if canonical_winner_army is None:
-            await interaction.response.send_message(
-                "Winner army is not in the approved army list. Please use the autocomplete suggestions.",
-                ephemeral=True,
+            await interaction.followup.send(
+                "Winner army is not in the approved army list. Please use the autocomplete suggestions."
             )
             return
 
         canonical_loser_army = self._validate_army_name(loser_army)
         if canonical_loser_army is None:
-            await interaction.response.send_message(
-                "Loser army is not in the approved army list. Please use the autocomplete suggestions.",
-                ephemeral=True,
+            await interaction.followup.send(
+                "Loser army is not in the approved army list. Please use the autocomplete suggestions."
             )
             return
 
         canonical_winner_disposition = self._validate_disposition(winner_disposition)
         if canonical_winner_disposition is None:
-            await interaction.response.send_message(
-                "Winner disposition is not valid. Please choose one of the provided dispositions.",
-                ephemeral=True,
+            await interaction.followup.send(
+                "Winner disposition is not valid. Please choose one of the provided dispositions."
             )
             return
 
         canonical_loser_disposition = self._validate_disposition(loser_disposition)
         if canonical_loser_disposition is None:
-            await interaction.response.send_message(
-                "Loser disposition is not valid. Please choose one of the provided dispositions.",
-                ephemeral=True,
+            await interaction.followup.send(
+                "Loser disposition is not valid. Please choose one of the provided dispositions."
             )
             return
 
@@ -250,9 +245,8 @@ class MatchCog(commands.Cog):
                 dt = datetime.datetime.fromisoformat(date)
                 date_iso = dt.date().isoformat()
             except Exception:
-                await interaction.response.send_message(
-                    "Date must be in YYYY-MM-DD format.",
-                    ephemeral=True,
+                await interaction.followup.send(
+                    "Date must be in YYYY-MM-DD format."
                 )
                 return
         else:
@@ -261,9 +255,8 @@ class MatchCog(commands.Cog):
         # Write to db
         try:
             if not interaction.guild:
-                await interaction.response.send_message(
-                    "This command must be used in a server (guild).",
-                    ephemeral=True,
+                await interaction.followup.send(
+                    "This command must be used in a server (guild)."
                 )
                 return
 
@@ -282,9 +275,8 @@ class MatchCog(commands.Cog):
                 notes,
             )
         except Exception as e:
-            await interaction.response.send_message(
-                f"Failed to save match: {e}",
-                ephemeral=True,
+            await interaction.followup.send(
+                f"Failed to save match: {e}"
             )
             return
 
@@ -311,7 +303,7 @@ class MatchCog(commands.Cog):
             embed.add_field(name="Notes", value=notes, inline=False)
 
         embed.set_footer(text=f"Match ID: {match_id}")
-        await interaction.response.send_message(embed=embed)
+        await interaction.followup.send(embed=embed)
 
     @app_commands.command(name="playerstats", description="Show stats for a player")
     async def playerstats(self, interaction: discord.Interaction, player: discord.Member):
