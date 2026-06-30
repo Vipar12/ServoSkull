@@ -50,7 +50,7 @@ class MatchCog(commands.Cog):
         "Reconnaissance",
         "Priority assets",
     ]
-
+python -m pip install -r requirements.txt
     def __init__(self, bot: commands.Bot, db: Database):
         self.bot = bot
         self.db = db
