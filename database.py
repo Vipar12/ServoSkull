@@ -19,8 +19,6 @@ CREATE TABLE IF NOT EXISTS matches (
     loser_score INTEGER NOT NULL,
     winner_army TEXT NOT NULL,
     loser_army TEXT NOT NULL,
-    winner_disposition TEXT,
-    loser_disposition TEXT,
     date TEXT NOT NULL,
     notes TEXT,
     timestamp INTEGER NOT NULL
@@ -47,13 +45,13 @@ class Database:
             self.conn.close()
             self.conn = None
 
-    async def add_match(self, guild_id: str, winner_id: str, loser_id: str, winner_score: int, loser_score: int, winner_army: str, loser_army: str, winner_disposition: str, loser_disposition: str, date_iso: str, notes: Optional[str] = None):
+    async def add_match(self, guild_id: str, winner_id: str, loser_id: str, winner_score: int, loser_score: int, winner_army: str, loser_army: str, date_iso: str, notes: Optional[str] = None):
         async with self.lock:
             ts = int(datetime.datetime.utcnow().timestamp())
             cur = self.conn.cursor()
             cur.execute(
-                "INSERT INTO matches (guild_id, winner_id, loser_id, winner_score, loser_score, winner_army, loser_army, winner_disposition, loser_disposition, date, notes, timestamp) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                (guild_id, winner_id, loser_id, winner_score, loser_score, winner_army, loser_army, winner_disposition, loser_disposition, date_iso, notes, ts)
+                "INSERT INTO matches (guild_id, winner_id, loser_id, winner_score, loser_score, winner_army, loser_army, date, notes, timestamp) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                (guild_id, winner_id, loser_id, winner_score, loser_score, winner_army, loser_army, date_iso, notes, ts)
             )
             self.conn.commit()
             return cur.lastrowid
