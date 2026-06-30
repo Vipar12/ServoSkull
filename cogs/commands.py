@@ -43,6 +43,14 @@ class MatchCog(commands.Cog):
         "T'au Empire",
     ]
 
+    DISPOSITIONS = [
+        "Take and Hold",
+        "Purge the Foe",
+        "Disruption",
+        "Reconnaissance",
+        "Priority assets",
+    ]
+
     def __init__(self, bot: commands.Bot, db: Database):
         self.bot = bot
         self.db = db
@@ -97,6 +105,18 @@ class MatchCog(commands.Cog):
         lookup = self._army_lookup()
         return lookup.get(self._normalize_army(army))
 
+    @classmethod
+    def _normalize_disposition(cls, value: str) -> str:
+        return " ".join(value.strip().lower().split())
+
+    @classmethod
+    def _disposition_lookup(cls) -> dict[str, str]:
+        return {cls._normalize_disposition(name): name for name in cls.DISPOSITIONS}
+
+    def _validate_disposition(self, disp: str) -> Optional[str]:
+        lookup = self._disposition_lookup()
+        return lookup.get(self._normalize_disposition(disp))
+
     async def army_autocomplete(
         self,
         interaction: discord.Interaction,
@@ -125,11 +145,29 @@ class MatchCog(commands.Cog):
         winner="Winner (mention)",
         loser="Loser (mention)",
         winner_army="Winner's army",
+        winner_disposition="Winner's disposition",
         loser_army="Loser's army",
+        loser_disposition="Loser's disposition",
         winner_score="Winner's score",
         loser_score="Loser's score",
         date="Optional date (YYYY-MM-DD)",
         notes="Optional notes",
+    )
+    @app_commands.choices(
+        winner_disposition=[
+            app_commands.Choice(name="Take and Hold", value="Take and Hold"),
+            app_commands.Choice(name="Purge the Foe", value="Purge the Foe"),
+            app_commands.Choice(name="Disruption", value="Disruption"),
+            app_commands.Choice(name="Recon", value="Recon"),
+            app_commands.Choice(name="Priority assets", value="Priority assets"),
+        ],
+        loser_disposition=[
+            app_commands.Choice(name="Take and Hold", value="Take and Hold"),
+            app_commands.Choice(name="Purge the Foe", value="Purge the Foe"),
+            app_commands.Choice(name="Disruption", value="Disruption"),
+            app_commands.Choice(name="Recon", value="Recon"),
+            app_commands.Choice(name="Priority assets", value="Priority assets"),
+        ],
     )
     @app_commands.autocomplete(
         winner_army=army_autocomplete,
@@ -141,7 +179,9 @@ class MatchCog(commands.Cog):
         winner: discord.Member,
         loser: discord.Member,
         winner_army: str,
+        winner_disposition: str,
         loser_army: str,
+        loser_disposition: str,
         winner_score: int,
         loser_score: int,
         date: Optional[str] = None,
@@ -185,6 +225,22 @@ class MatchCog(commands.Cog):
             )
             return
 
+        canonical_winner_disposition = self._validate_disposition(winner_disposition)
+        if canonical_winner_disposition is None:
+            await interaction.response.send_message(
+                "Winner disposition is not valid. Please choose one of the provided dispositions.",
+                ephemeral=True,
+            )
+            return
+
+        canonical_loser_disposition = self._validate_disposition(loser_disposition)
+        if canonical_loser_disposition is None:
+            await interaction.response.send_message(
+                "Loser disposition is not valid. Please choose one of the provided dispositions.",
+                ephemeral=True,
+            )
+            return
+
         winner_army = canonical_winner_army
         loser_army = canonical_loser_army
 
@@ -212,6 +268,7 @@ class MatchCog(commands.Cog):
                 return
 
             guild_id = str(interaction.guild.id)
+            notes_with_disp = f"Winner Disposition: {canonical_winner_disposition}; Loser Disposition: {canonical_loser_disposition}; {notes or ''}"
             match_id = await self.db.add_match(
                 guild_id,
                 str(winner.id),
@@ -221,7 +278,7 @@ class MatchCog(commands.Cog):
                 winner_army,
                 loser_army,
                 date_iso,
-                notes,
+                notes_with_disp,
             )
         except Exception as e:
             await interaction.response.send_message(
@@ -236,8 +293,16 @@ class MatchCog(commands.Cog):
             value=f"{winner.mention} ({winner_army}) - {winner_score}",
         )
         embed.add_field(
+            name="Winner Disposition",
+            value=canonical_winner_disposition,
+        )
+        embed.add_field(
             name="Loser",
             value=f"{loser.mention} ({loser_army}) - {loser_score}",
+        )
+        embed.add_field(
+            name="Loser Disposition",
+            value=canonical_loser_disposition,
         )
         embed.add_field(name="Date", value=date_iso)
 
