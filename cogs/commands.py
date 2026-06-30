@@ -50,7 +50,7 @@ class MatchCog(commands.Cog):
         "Reconnaissance",
         "Priority assets",
     ]
-python -m pip install -r requirements.txt
+
     def __init__(self, bot: commands.Bot, db: Database):
         self.bot = bot
         self.db = db
@@ -268,7 +268,6 @@ python -m pip install -r requirements.txt
                 return
 
             guild_id = str(interaction.guild.id)
-            notes_with_disp = f"Winner Disposition: {canonical_winner_disposition}; Loser Disposition: {canonical_loser_disposition}; {notes or ''}"
             match_id = await self.db.add_match(
                 guild_id,
                 str(winner.id),
@@ -276,9 +275,11 @@ python -m pip install -r requirements.txt
                 winner_score,
                 loser_score,
                 winner_army,
+                canonical_winner_disposition,
                 loser_army,
+                canonical_loser_disposition,
                 date_iso,
-                notes_with_disp,
+                notes,
             )
         except Exception as e:
             await interaction.response.send_message(

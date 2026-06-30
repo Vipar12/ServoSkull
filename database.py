@@ -4,10 +4,11 @@ Handles creating tables and queries used by the bot.
 """
 import sqlite3
 import asyncio
+from pathlib import Path
 from typing import Optional, List, Dict, Any
 import datetime
 
-DB_PATH = "matches.db"
+DB_PATH = Path(__file__).resolve().with_name("matches.db")
 
 CREATE_MATCHES_TABLE = """
 CREATE TABLE IF NOT EXISTS matches (
@@ -18,12 +19,19 @@ CREATE TABLE IF NOT EXISTS matches (
     winner_score INTEGER NOT NULL,
     loser_score INTEGER NOT NULL,
     winner_army TEXT NOT NULL,
+    winner_disposition TEXT NOT NULL DEFAULT '',
     loser_army TEXT NOT NULL,
+    loser_disposition TEXT NOT NULL DEFAULT '',
     date TEXT NOT NULL,
     notes TEXT,
     timestamp INTEGER NOT NULL
 );
 """
+
+ADDITIONAL_MATCH_COLUMNS = (
+    ("winner_disposition", "TEXT NOT NULL DEFAULT ''"),
+    ("loser_disposition", "TEXT NOT NULL DEFAULT ''"),
+)
 
 class Database:
     def __init__(self, path: str = DB_PATH):
@@ -32,12 +40,24 @@ class Database:
         self.lock = asyncio.Lock()
 
     async def connect(self):
-        # Use a thread-safe connection
-        self.conn = sqlite3.connect(self.path, check_same_thread=False)
+        db_path = Path(self.path)
+        db_path.parent.mkdir(parents=True, exist_ok=True)
+        if db_path.exists():
+            try:
+                db_path.chmod(0o666)
+            except Exception:
+                pass
+
+        self.conn = sqlite3.connect(f"file:{db_path.resolve().as_posix()}?mode=rwc", uri=True, check_same_thread=False)
         self.conn.row_factory = sqlite3.Row
         with self.conn:
             self.conn.execute(CREATE_MATCHES_TABLE)
-            # ensure index for guild filtering
+            existing_columns = {
+                row[1] for row in self.conn.execute("PRAGMA table_info(matches);").fetchall()
+            }
+            for column_name, column_def in ADDITIONAL_MATCH_COLUMNS:
+                if column_name not in existing_columns:
+                    self.conn.execute(f"ALTER TABLE matches ADD COLUMN {column_name} {column_def};")
             self.conn.execute("CREATE INDEX IF NOT EXISTS idx_matches_guild ON matches(guild_id);")
 
     async def close(self):
@@ -45,13 +65,13 @@ class Database:
             self.conn.close()
             self.conn = None
 
-    async def add_match(self, guild_id: str, winner_id: str, loser_id: str, winner_score: int, loser_score: int, winner_army: str, loser_army: str, date_iso: str, notes: Optional[str] = None):
+    async def add_match(self, guild_id: str, winner_id: str, loser_id: str, winner_score: int, loser_score: int, winner_army: str, winner_disposition: str, loser_army: str, loser_disposition: str, date_iso: str, notes: Optional[str] = None):
         async with self.lock:
             ts = int(datetime.datetime.utcnow().timestamp())
             cur = self.conn.cursor()
             cur.execute(
-                "INSERT INTO matches (guild_id, winner_id, loser_id, winner_score, loser_score, winner_army, loser_army, date, notes, timestamp) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                (guild_id, winner_id, loser_id, winner_score, loser_score, winner_army, loser_army, date_iso, notes, ts)
+                "INSERT INTO matches (guild_id, winner_id, loser_id, winner_score, loser_score, winner_army, winner_disposition, loser_army, loser_disposition, date, notes, timestamp) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                (guild_id, winner_id, loser_id, winner_score, loser_score, winner_army, winner_disposition, loser_army, loser_disposition, date_iso, notes, ts)
             )
             self.conn.commit()
             return cur.lastrowid
