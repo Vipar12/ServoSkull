@@ -77,9 +77,12 @@ class Database:
             try:
                 parsed = datetime.datetime.strptime(date_value, "%Y-%m-%d")
             except Exception:
-                continue
+                try:
+                    parsed = datetime.datetime.strptime(date_value, "%d/%m/%Y")
+                except Exception:
+                    continue
 
-            new_value = parsed.strftime("%d/%m/%Y")
+            new_value = parsed.strftime("%m/%d/%Y")
             if new_value != date_value:
                 cur.execute("UPDATE matches SET date = ? WHERE id = ?", (new_value, row["id"]))
                 updated += 1

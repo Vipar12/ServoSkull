@@ -119,17 +119,20 @@ class MatchCog(commands.Cog):
 
     @classmethod
     def _parse_date_input(cls, value: str) -> datetime.date:
-        return datetime.datetime.strptime(value.strip(), "%d/%m/%Y").date()
+        return datetime.datetime.strptime(value.strip(), "%m/%d/%Y").date()
 
     @classmethod
     def _format_date_display(cls, value: str) -> str:
         try:
-            return datetime.datetime.fromisoformat(value).strftime("%d/%m/%Y")
+            return datetime.datetime.fromisoformat(value).strftime("%m/%d/%Y")
         except Exception:
             try:
-                return datetime.datetime.strptime(value, "%Y-%m-%d").strftime("%d/%m/%Y")
+                return datetime.datetime.strptime(value, "%Y-%m-%d").strftime("%m/%d/%Y")
             except Exception:
-                return value
+                try:
+                    return datetime.datetime.strptime(value, "%d/%m/%Y").strftime("%m/%d/%Y")
+                except Exception:
+                    return value
 
     async def army_autocomplete(
         self,
@@ -164,7 +167,7 @@ class MatchCog(commands.Cog):
         loser_disposition="Loser's disposition",
         winner_score="Winner's score",
         loser_score="Loser's score",
-        date="Optional date (DD/MM/YYYY)",
+        date="Optional date (MM/DD/YYYY)",
         notes="Optional notes",
     )
     @app_commands.choices(
@@ -256,14 +259,14 @@ class MatchCog(commands.Cog):
         # Parse date
         if date:
             try:
-                date_display = self._parse_date_input(date).strftime("%d/%m/%Y")
+                date_display = self._parse_date_input(date).strftime("%m/%d/%Y")
             except Exception:
                 await interaction.followup.send(
-                    "Date must be in DD/MM/YYYY format."
+                    "Date must be in MM/DD/YYYY format."
                 )
                 return
         else:
-            date_display = datetime.date.today().strftime("%d/%m/%Y")
+            date_display = datetime.date.today().strftime("%m/%d/%Y")
 
         # Write to db
         try:
