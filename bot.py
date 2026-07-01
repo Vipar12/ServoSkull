@@ -72,25 +72,6 @@ class War40kBot(commands.Bot):
             await self.db.connect()
             cog = MatchCog(self, self.db)
             await self.add_cog(cog)
-            try:
-                from discord import app_commands as _app_commands
-
-                dev_guild = os.getenv("DEV_GUILD_ID")
-                guild_obj = discord.Object(id=int(dev_guild)) if dev_guild else None
-                for name in dir(MatchCog):
-                    attr = getattr(MatchCog, name)
-                    if isinstance(attr, _app_commands.Command):
-                        try:
-                            bound = getattr(cog, name)
-                            if guild_obj:
-                                self.tree.add_command(bound, guild=guild_obj)
-                            else:
-                                self.tree.add_command(bound)
-                            logging.info("Added app command %s to tree", name)
-                        except Exception:
-                            logging.exception("Failed to add app command %s", name)
-            except Exception:
-                logging.exception("Failed to register cog app commands to tree")
 
             try:
                 dev_guild = os.getenv("DEV_GUILD_ID")

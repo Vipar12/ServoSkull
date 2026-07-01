@@ -176,8 +176,8 @@ class MatchCog(commands.Cog):
     async def record(
         self,
         interaction: discord.Interaction,
-        winner: discord.Member,
-        loser: discord.Member,
+        winner: discord.User,
+        loser: discord.User,
         winner_army: str,
         winner_disposition: str,
         loser_army: str,
