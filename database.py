@@ -68,8 +68,29 @@ class Database:
             conn.execute("CREATE INDEX IF NOT EXISTS idx_matches_guild ON matches(guild_id);")
         return conn
 
+    def _migrate_date_format(self) -> int:
+        cur = self.conn.cursor()
+        rows = cur.execute("SELECT id, date FROM matches").fetchall()
+        updated = 0
+        for row in rows:
+            date_value = row["date"]
+            try:
+                parsed = datetime.datetime.strptime(date_value, "%Y-%m-%d")
+            except Exception:
+                continue
+
+            new_value = parsed.strftime("%d/%m/%Y")
+            if new_value != date_value:
+                cur.execute("UPDATE matches SET date = ? WHERE id = ?", (new_value, row["id"]))
+                updated += 1
+
+        if updated:
+            self.conn.commit()
+        return updated
+
     async def connect(self):
         self.conn = self._open_connection(self.path)
+        self._migrate_date_format()
 
     async def _switch_to_fallback(self):
         if self.conn:
@@ -109,7 +130,7 @@ class Database:
 
     async def get_player_matches(self, user_id: str, guild_id: str) -> List[sqlite3.Row]:
         cur = self.conn.cursor()
-        cur.execute("SELECT * FROM matches WHERE (winner_id = ? OR loser_id = ?) AND guild_id = ? ORDER BY date DESC", (user_id, user_id, guild_id))
+        cur.execute("SELECT * FROM matches WHERE (winner_id = ? OR loser_id = ?) AND guild_id = ? ORDER BY timestamp DESC", (user_id, user_id, guild_id))
         return cur.fetchall()
 
     async def get_recent_matches(self, guild_id: str, limit: int = 10, player: Optional[str] = None, army: Optional[str] = None) -> List[sqlite3.Row]:
@@ -128,19 +149,19 @@ class Database:
             params.extend([army, army])
         if clauses:
             query += " WHERE " + " AND ".join(clauses)
-        query += " ORDER BY date DESC LIMIT ?"
+        query += " ORDER BY timestamp DESC LIMIT ?"
         params.append(limit)
         cur.execute(query, params)
         return cur.fetchall()
 
     async def get_all_matches(self, guild_id: str) -> List[sqlite3.Row]:
         cur = self.conn.cursor()
-        cur.execute("SELECT * FROM matches WHERE guild_id = ? ORDER BY date DESC", (guild_id,))
+        cur.execute("SELECT * FROM matches WHERE guild_id = ? ORDER BY timestamp DESC", (guild_id,))
         return cur.fetchall()
 
     async def get_matches_between(self, user1: str, user2: str, guild_id: str) -> List[sqlite3.Row]:
         cur = self.conn.cursor()
-        cur.execute("SELECT * FROM matches WHERE ((winner_id = ? AND loser_id = ?) OR (winner_id = ? AND loser_id = ?)) AND guild_id = ? ORDER BY date DESC", (user1, user2, user2, user1, guild_id))
+        cur.execute("SELECT * FROM matches WHERE ((winner_id = ? AND loser_id = ?) OR (winner_id = ? AND loser_id = ?)) AND guild_id = ? ORDER BY timestamp DESC", (user1, user2, user2, user1, guild_id))
         return cur.fetchall()
 
     async def delete_match(self, match_id: int, guild_id: str):
@@ -186,7 +207,7 @@ class Database:
 
     async def army_stats(self, army_name: str, guild_id: str) -> Dict[str, Any]:
         cur = self.conn.cursor()
-        cur.execute("SELECT * FROM matches WHERE (winner_army = ? OR loser_army = ?) AND guild_id = ? ORDER BY date DESC", (army_name, army_name, guild_id))
+        cur.execute("SELECT * FROM matches WHERE (winner_army = ? OR loser_army = ?) AND guild_id = ? ORDER BY timestamp DESC", (army_name, army_name, guild_id))
         matches = cur.fetchall()
         games = len(matches)
         wins = 0

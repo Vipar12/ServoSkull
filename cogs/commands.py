@@ -256,14 +256,14 @@ class MatchCog(commands.Cog):
         # Parse date
         if date:
             try:
-                date_iso = self._parse_date_input(date).isoformat()
+                date_display = self._parse_date_input(date).strftime("%d/%m/%Y")
             except Exception:
                 await interaction.followup.send(
                     "Date must be in DD/MM/YYYY format."
                 )
                 return
         else:
-            date_iso = datetime.date.today().isoformat()
+            date_display = datetime.date.today().strftime("%d/%m/%Y")
 
         # Write to db
         try:
@@ -284,7 +284,7 @@ class MatchCog(commands.Cog):
                 canonical_winner_disposition,
                 loser_army,
                 canonical_loser_disposition,
-                date_iso,
+                date_display,
                 notes,
             )
         except Exception as e:
@@ -310,7 +310,7 @@ class MatchCog(commands.Cog):
             name="Loser Disposition",
             value=canonical_loser_disposition,
         )
-        embed.add_field(name="Date", value=self._format_date_display(date_iso))
+        embed.add_field(name="Date", value=date_display)
 
         if notes:
             embed.add_field(name="Notes", value=notes, inline=False)
