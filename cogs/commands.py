@@ -117,6 +117,20 @@ class MatchCog(commands.Cog):
         lookup = self._disposition_lookup()
         return lookup.get(self._normalize_disposition(disp))
 
+    @classmethod
+    def _parse_date_input(cls, value: str) -> datetime.date:
+        return datetime.datetime.strptime(value.strip(), "%d/%m/%Y").date()
+
+    @classmethod
+    def _format_date_display(cls, value: str) -> str:
+        try:
+            return datetime.datetime.fromisoformat(value).strftime("%d/%m/%Y")
+        except Exception:
+            try:
+                return datetime.datetime.strptime(value, "%Y-%m-%d").strftime("%d/%m/%Y")
+            except Exception:
+                return value
+
     async def army_autocomplete(
         self,
         interaction: discord.Interaction,
@@ -150,7 +164,7 @@ class MatchCog(commands.Cog):
         loser_disposition="Loser's disposition",
         winner_score="Winner's score",
         loser_score="Loser's score",
-        date="Optional date (YYYY-MM-DD)",
+        date="Optional date (DD/MM/YYYY)",
         notes="Optional notes",
     )
     @app_commands.choices(
@@ -242,11 +256,10 @@ class MatchCog(commands.Cog):
         # Parse date
         if date:
             try:
-                dt = datetime.datetime.fromisoformat(date)
-                date_iso = dt.date().isoformat()
+                date_iso = self._parse_date_input(date).isoformat()
             except Exception:
                 await interaction.followup.send(
-                    "Date must be in YYYY-MM-DD format."
+                    "Date must be in DD/MM/YYYY format."
                 )
                 return
         else:
@@ -297,7 +310,7 @@ class MatchCog(commands.Cog):
             name="Loser Disposition",
             value=canonical_loser_disposition,
         )
-        embed.add_field(name="Date", value=date_iso)
+        embed.add_field(name="Date", value=self._format_date_display(date_iso))
 
         if notes:
             embed.add_field(name="Notes", value=notes, inline=False)
@@ -417,7 +430,7 @@ class MatchCog(commands.Cog):
                 f"{r['loser_score']} ({r['loser_army']}) {loser_mention}"
             )
             embed.add_field(
-                name=f"Match {r['id']} - {r['date']}",
+                name=f"Match {r['id']} - {self._format_date_display(r['date'])}",
                 value=desc,
                 inline=False,
             )
