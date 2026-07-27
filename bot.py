@@ -42,6 +42,10 @@ WEBHOOK_PORT = int(os.getenv("WEBHOOK_PORT", "8080"))
 WEBHOOK_BRANCH = os.getenv("WEBHOOK_BRANCH", "main")
 if not TOKEN:
     raise RuntimeError("DISCORD_TOKEN not set in environment or .env file")
+if not WEBHOOK_SECRET:
+    raise RuntimeError("WEBHOOK_SECRET not set in environment or .env file")
+if not APP_ID:
+    raise RuntimeError("APPLICATION_ID not set in environment or .env file")
 
 APP_ID = int(APP_ID) if APP_ID else None
 
@@ -65,7 +69,7 @@ class War40kBot(commands.Bot):
 
     def _verify_signature(self, payload: bytes, signature_header: str | None) -> bool:
         if not WEBHOOK_SECRET:
-            return False
+            raise RuntimeError("WEBHOOK_SECRET not set in environment or .env file")
         if not signature_header or not signature_header.startswith("sha256="):
             return False
 
@@ -119,7 +123,7 @@ class War40kBot(commands.Bot):
 
     async def handle_update_webhook(self, request: web.Request) -> web.Response:
         if not WEBHOOK_SECRET:
-            return web.Response(status=503, text="Webhook listener is disabled")
+            raise RuntimeError("WEBHOOK_SECRET not set in environment or .env file")
 
         payload = await request.read()
         signature = request.headers.get("X-Hub-Signature-256")
