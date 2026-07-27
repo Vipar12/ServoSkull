@@ -175,14 +175,14 @@ class MatchCog(commands.Cog):
             app_commands.Choice(name="Take and Hold", value="Take and Hold"),
             app_commands.Choice(name="Purge the Foe", value="Purge the Foe"),
             app_commands.Choice(name="Disruption", value="Disruption"),
-            app_commands.Choice(name="Recon", value="Recon"),
+            app_commands.Choice(name="Reconnaissance", value="Reconnaissance"),
             app_commands.Choice(name="Priority assets", value="Priority assets"),
         ],
         loser_disposition=[
             app_commands.Choice(name="Take and Hold", value="Take and Hold"),
             app_commands.Choice(name="Purge the Foe", value="Purge the Foe"),
             app_commands.Choice(name="Disruption", value="Disruption"),
-            app_commands.Choice(name="Recon", value="Recon"),
+            app_commands.Choice(name="Reconnaissance", value="Reconnaissance"),
             app_commands.Choice(name="Priority assets", value="Priority assets"),
         ],
     )

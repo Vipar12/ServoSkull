@@ -1,5 +1,5 @@
 """
-Main bot entrypoint for Warhammer 40k match tracker.
+Main bot entrypoint
 Run this file to start the bot.
 """
 from pathlib import Path
